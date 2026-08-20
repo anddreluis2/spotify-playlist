@@ -3,12 +3,39 @@
   "version": "1.0.0",
   "description": "Create a Spotify playlist from a list of tracks, or replace an existing one, preserving file order",
   "type": "module",
-  "bin": { "create-playlist": "./create-playlist.mjs" },
-  "main": "./create-playlist.mjs",
-  "files": ["create-playlist.mjs", "tracks.example.txt", "README.md", "LICENSE"],
-  "engines": { "node": ">=22" },
-  "keywords": ["spotify", "playlist", "cli", "pkce"],
+  "bin": {
+    "create-playlist": "./create-playlist.ts"
+  },
+  "main": "./create-playlist.ts",
+  "files": [
+    "create-playlist.ts",
+    "src",
+    "tsconfig.json",
+    "tracks.example.txt",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=23.6"
+  },
+  "keywords": [
+    "spotify",
+    "playlist",
+    "cli",
+    "pkce",
+    "typescript"
+  ],
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/anddreluis2/spotify-playlist.git" },
-  "scripts": { "start": "node create-playlist.mjs" }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anddreluis2/spotify-playlist.git"
+  },
+  "scripts": {
+    "start": "node create-playlist.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
 }

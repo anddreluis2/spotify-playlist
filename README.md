@@ -3,10 +3,10 @@
 Build a Spotify playlist from a plain text file — one track per line, **in the order you wrote them**.
 Creates a new playlist or replaces the contents of an existing one.
 
-Single file, zero dependencies, Node 22+.
+TypeScript, zero runtime dependencies, Node 23.6+ (which runs `.ts` directly, no build step).
 
 ```bash
-node create-playlist.mjs --name "Road trip" --file tracks.txt
+node create-playlist.ts --name "Road trip" --file tracks.txt
 ```
 
 ```
@@ -38,7 +38,7 @@ You need a free Spotify app to get a client id. It takes about two minutes.
    ```bash
    cp .env.example .env        # then paste the id into .env
    export SPOTIFY_CLIENT_ID=...
-   node create-playlist.mjs --client-id ... [...]
+   node create-playlist.ts --client-id ... [...]
    ```
 
 There is no client secret anywhere: the login uses Authorization Code + PKCE.
@@ -50,18 +50,18 @@ The first run opens your browser to authorize. The token is cached in
 
 ```bash
 # create a playlist
-node create-playlist.mjs --name "My Playlist" --file tracks.txt
+node create-playlist.ts --name "My Playlist" --file tracks.txt
 
 # make it public, with a description
-node create-playlist.mjs --name "My Playlist" --file tracks.txt --public --desc "summer 2026"
+node create-playlist.ts --name "My Playlist" --file tracks.txt --public --desc "summer 2026"
 
 # replace the contents of an existing playlist (the file becomes the source of truth)
-node create-playlist.mjs --playlist https://open.spotify.com/playlist/xxx --file tracks.txt
+node create-playlist.ts --playlist https://open.spotify.com/playlist/xxx --file tracks.txt
 
 # pipe from anywhere
-grep -v '^#' favourites.txt | node create-playlist.mjs --name "Favourites" --file -
+grep -v '^#' favourites.txt | node create-playlist.ts --name "Favourites" --file -
 
-node create-playlist.mjs --help
+node create-playlist.ts --help
 ```
 
 Installing it as a command is optional:
@@ -91,8 +91,23 @@ be resolved are listed at the end and skipped — the rest is still written.
 | --- | --- |
 | `403` on any call | The account you authorized is not in **User Management**, or the app was created without **Web API**. Both are fixed in the dashboard, then delete `~/.config/spotify-playlist/token.json` and run again. |
 | `INVALID_CLIENT` on login | The redirect URI in the dashboard is not exactly `http://127.0.0.1:8888/callback`. |
-| Browser tab hangs on "authorize" | Something else is on port 8888. Change `REDIRECT_URI` in the script and in the dashboard to match. |
+| Browser tab hangs on "authorize" | Something else is on port 8888. Change `REDIRECT_URI` in `src/config.ts` and in the dashboard to match. |
 | `429, retry-after <big number>` | You hit a per-endpoint rate limit. It only affects track lookups; playlist writes keep working. |
+
+## Layout
+
+| File | What lives there |
+| --- | --- |
+| `create-playlist.ts` | the CLI: arguments, help, and the flow from file to playlist |
+| `src/types.ts` | the Spotify response shapes this tool reads |
+| `src/config.ts` | constants, and the API quirks worked around below |
+| `src/api.ts` | the single HTTP entry point, including the 429 policy |
+| `src/auth.ts` | login (Authorization Code + PKCE) and the cached token |
+| `src/spotify.ts` | how ids are written and how a track is labelled |
+| `src/tracks.ts` | input lines to track ids |
+| `src/playlist.ts` | creating, opening and rewriting a playlist |
+
+`npm run typecheck` runs `tsc` in strict mode; TypeScript is only needed for that, never to run the tool.
 
 ## Notes on the Spotify API
 
