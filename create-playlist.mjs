@@ -17,6 +17,7 @@
 
 import { spawn } from 'node:child_process'
 import { hash, randomBytes } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { homedir } from 'node:os'
@@ -292,6 +293,51 @@ async function readItemLabels(token, playlistId) {
 
 /* ---------------------------------- main ---------------------------------- */
 
+const HELP = `
+create-playlist — build a Spotify playlist from a list of tracks, in file order.
+
+  create-playlist --name "My Playlist" --file tracks.txt [--desc "..."] [--public]
+  create-playlist --playlist <id|url> --file tracks.txt
+
+Options
+  --name <text>       name of the playlist to create (or rename to, with --playlist)
+  --file <path>       list of tracks, one per line; "-" reads standard input
+  --playlist <id|url> replace the contents of an existing playlist instead of creating one
+  --desc <text>       playlist description
+  --public            make the playlist public (default: private)
+  --client-id <id>    Spotify client id (default: $SPOTIFY_CLIENT_ID or the .env next to the script)
+  --help              show this
+
+Each line of the file may be a Spotify URI, URL, bare id, or "Artist - Song" to search for.
+Blank lines and lines starting with # are ignored.
+
+First run opens the browser to authorize; the token is cached in
+${TOKEN_FILE.replace(homedir(), '~')} and refreshed automatically.
+
+Setup: https://github.com/anddreluis2/spotify-playlist#setup
+`
+
+const SETUP_HINT = `No Spotify client id found.
+
+  1. Create an app at https://developer.spotify.com/dashboard
+     - APIs used: Web API
+     - Redirect URI: ${REDIRECT_URI.href}
+     - Settings > User Management: add the account you will authorize with
+  2. Pass it with --client-id, export SPOTIFY_CLIENT_ID, or write a .env file:
+
+     SPOTIFY_CLIENT_ID=your_client_id
+
+No client secret is needed: the login uses Authorization Code + PKCE.`
+
+async function readLines(path) {
+  // fs/promises cannot read a file descriptor, so standard input goes through the sync API.
+  const content = path === '-' ? readFileSync(0, 'utf8') : await readFile(path, 'utf8')
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+}
+
 async function main() {
   await loadEnv()
 
@@ -302,21 +348,20 @@ async function main() {
       desc: { type: 'string' },
       playlist: { type: 'string' },
       public: { type: 'boolean' },
+      'client-id': { type: 'string' },
+      help: { type: 'boolean', short: 'h' },
     },
   })
 
-  if (!process.env.SPOTIFY_CLIENT_ID) {
-    throw new Error('Set SPOTIFY_CLIENT_ID (client id of your app at developer.spotify.com/dashboard).')
-  }
+  if (args.help) return console.log(HELP.trim())
+
+  if (args['client-id']) process.env.SPOTIFY_CLIENT_ID = args['client-id']
+  if (!process.env.SPOTIFY_CLIENT_ID) throw new Error(SETUP_HINT)
   if (!args.name && !args.playlist) throw new Error('Pass --name "Playlist name" or --playlist <id|url>.')
-  if (!args.file) throw new Error('Pass --file tracks.txt (one track or URI per line).')
+  if (!args.file) throw new Error('Pass --file tracks.txt (one track or URI per line), or --help.')
 
-  const lines = (await readFile(args.file, 'utf8'))
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#'))
-
-  if (!lines.length) throw new Error(`${args.file} is empty.`)
+  const lines = await readLines(args.file)
+  if (!lines.length) throw new Error(`${args.file} has no tracks.`)
 
   const token = await authenticate()
   const entries = await resolveLines(token, lines)
@@ -350,7 +395,14 @@ async function main() {
   if (missing.length) console.log(`\nSkipped (${missing.length}):\n- ${missing.join('\n- ')}`)
 }
 
+// A 403 here is almost never about scopes: it means the app cannot reach the endpoint at all.
+const FORBIDDEN_HINT = `
+A 403 from Spotify usually means the app itself is not allowed to use that endpoint:
+  - the account you authorized with is not in Settings > User Management of the app, or
+  - the app was created without "Web API" under APIs used.
+Both are fixed at https://developer.spotify.com/dashboard`
+
 main().catch((error) => {
-  console.error('Error:', error.message)
+  console.error(`Error: ${error.message}${error.status === 403 ? FORBIDDEN_HINT : ''}`)
   process.exit(1)
 })

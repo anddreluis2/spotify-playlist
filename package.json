@@ -1,0 +1,14 @@
+{
+  "name": "spotify-playlist-from-file",
+  "version": "1.0.0",
+  "description": "Create a Spotify playlist from a list of tracks, or replace an existing one, preserving file order",
+  "type": "module",
+  "bin": { "create-playlist": "./create-playlist.mjs" },
+  "main": "./create-playlist.mjs",
+  "files": ["create-playlist.mjs", "tracks.example.txt", "README.md", "LICENSE"],
+  "engines": { "node": ">=22" },
+  "keywords": ["spotify", "playlist", "cli", "pkce"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/anddreluis2/spotify-playlist.git" },
+  "scripts": { "start": "node create-playlist.mjs" }
+}

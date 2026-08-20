@@ -2,3 +2,7 @@
 token.json
 *.log
 node_modules/
+
+# personal lists stay out of the repo
+tracks.txt
+tracks-previous.txt

@@ -1,0 +1,6 @@
+# One track per line. Any of these forms works:
+spotify:track:0sKymIftfpTNp62P4oTvTY
+https://open.spotify.com/track/1mSxbLW7fKABfeY4lGpg0E
+3gdewACMIVMEWVbyb8O9sY
+Djavan - Oceano
+Marisa Monte - Vilarejo
